@@ -4,7 +4,7 @@ from . import dense_transforms
 
 
 class DetectionSuperTuxDataset(Dataset):
-    def __init__(self, dataset_path, transform=dense_transforms.ToTensor(), min_size=20):
+    def __init__(self, dataset_path, transform=dense_transforms.ToTensor(), min_size=10):
         from glob import glob
         from os import path
         self.files = []
@@ -14,7 +14,9 @@ class DetectionSuperTuxDataset(Dataset):
         self.min_size = min_size
 
     def _filter(self, boxes):
-        return [b for b in boxes if abs(b[3] - b[1]) * abs(b[2] - b[0]) >= self.min_size]
+        if len(boxes) == 0:
+            return boxes
+        return boxes[abs(boxes[:, 3] - boxes[:, 1]) * abs(boxes[:, 2] - boxes[:, 0]) >= self.min_size]
 
     def __len__(self):
         return len(self.files)
@@ -24,7 +26,7 @@ class DetectionSuperTuxDataset(Dataset):
         b = self.files[idx]
         im = Image.open(b + '.png')
         nfo = np.load(b + '.npz')
-        data = im, self._filter(nfo['puck']), self._filter(nfo['kart']), self._filter(nfo['pickup'])
+        data = im, nfo['puck'], [], []
         if self.transform is not None:
             data = self.transform(*data)
         return data
@@ -36,7 +38,7 @@ def load_detection_data(dataset_path, num_workers=0, batch_size=32, **kwargs):
 
 
 if __name__ == '__main__':
-    dataset = DetectionSuperTuxDataset('dense_data_final/train')
+    dataset = DetectionSuperTuxDataset('dense_data/train')
     import torchvision.transforms.functional as F
     from pylab import show, subplots
     import matplotlib.patches as patches
@@ -58,14 +60,15 @@ if __name__ == '__main__':
         ax.axis('off')
     dataset = DetectionSuperTuxDataset('dense_data/train',
                                        transform=dense_transforms.Compose([dense_transforms.RandomHorizontalFlip(0),
-                                                                           dense_transforms.ToTensor(),
-                                                                           dense_transforms.to_heatmap]))
+                                                                           dense_transforms.ToTensor()]))
     fig.tight_layout()
     # fig.savefig('box.png', bbox_inches='tight', pad_inches=0, transparent=True)
 
     fig, axs = subplots(1, 2)
     for i, ax in enumerate(axs.flat):
-        im, hm, size = dataset[100+i]
+
+        im, *dets = dataset[100+i]
+        hm, size = dense_transforms.detections_to_heatmap(dets, im.shape[1:])
         ax.imshow(F.to_pil_image(im), interpolation=None)
         hm = hm.numpy().transpose([1, 2, 0])
         alpha = 0.25*hm.max(axis=2) + 0.75

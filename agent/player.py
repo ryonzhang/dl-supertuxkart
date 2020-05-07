@@ -551,14 +551,16 @@ class HockeyPlayer:
         det = model.detect(img_tensor, min_score=-2)
         ball_info = self.previous_location
         for tup in det:
-            is_set = False
-            if tup[0] == 0 and tup[1] > -1.2 and not is_set:
-                    ball_info = self._to_world([tup[2], tup[3]], proj, view, 0.3695)
+            if tup[0] == 0 and tup[1] > -1.2:
+                ball_info = self._to_world([tup[2], tup[3]], proj, view, 0.3695)
+                break
+
 
         # # Getting the puck_location, team mate karts, opponent karts and items on the field
         self.previous_location = ball_info
         print('model calculated:'+str(ball_info))
         print('real:'+str(ball))
+
 
         kart_location = Locatable(player_info.kart.location[0], player_info.kart.location[2])
         kart_velocity = Locatable(player_info.kart.velocity[0], player_info.kart.velocity[2])

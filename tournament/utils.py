@@ -124,26 +124,33 @@ class Tournament:
                 view = np.array(state.players[0].camera.view).T
 
                 if save is not None:
-                    PIL.Image.fromarray(image).save(os.path.join(save, 'player%02d_%05d.png' % (i, t)))
+
                     #Generate labels for training sets
                     aim_point_world_soccer = state.soccer.ball.location
-                    #dist = np.linalg.norm((np.array(player.kart.location) - np.array(aim_point_world_soccer))[0:2])
-                    #print(aim_point_world_soccer, loc2)
-                    #distance = np.linalg.norm(aim_point_world_soccer-player.kart.location)
                     aps = self._to_image(aim_point_world_soccer, proj, view)
-                    with open(os.path.join(save, 'player%02d_%05d' % (i, t)) + '.csv', 'w') as f:
-                        if  0 <= aps[0] < self.graphics_config.screen_width and 0 <= aps[1] < self.graphics_config.screen_height:
-                            f.write('%d, %0.2f, %0.2f' %tuple((1, *aps)) )
-                        else:
-                            f.write('%d, %0.2f, %0.2f' %tuple((0, *aps)) )
-                        
+                    aps_one = self._to_image([aim_point_world_soccer[0]-state.soccer.ball.size/2,aim_point_world_soccer[1]-0.18,aim_point_world_soccer[2]-state.soccer.ball.size/2], proj, view)
+                    aps_two = self._to_image(
+                        [aim_point_world_soccer[0] + state.soccer.ball.size / 2, aim_point_world_soccer[1] + 0.18,
+                         aim_point_world_soccer[2] + state.soccer.ball.size / 2], proj, view)
+
+                    if 0 <= aps[0] < self.graphics_config.screen_width and 0 <= aps[1] < self.graphics_config.screen_height:
+                        print('one:'+str(aps_one))
+                        print('two:'+str(aps_two))
+                        width1= aps_one[0] if aps_one[0] < aps_two[0] else aps_two[0]
+                        width2 = aps_one[0] if aps_one[0] > aps_two[0] else aps_two[0]
+                        height1 = aps_one[1] if aps_one[1] < aps_two[1] else aps_two[1]
+                        height2 = aps_one[1] if aps_one[1] > aps_two[1] else aps_two[1]
+                        print([[width1,height1,width2,height2]])
+                        PIL.Image.fromarray(image).save(os.path.join(save, 'player%02d_%05d.png' % (i, t)))
+                        np.savez(os.path.join(save, 'player%02d_%05d' % (i, t)) + '.npz', puck=[[width1,height1,width2,height2]])
+
 
                         '''
-                        with open(os.path.join(save, 'player%02d_%05d' % (i, t)) + '.csv', 'w') as f:
-                            f.write('%0.3f,%0.3f,%0.3f,%0.3f,%0.3f,%0.3f' % (
-                                state.soccer.ball.location[0],state.soccer.ball.location[1], state.soccer.ball.location[2],
-                                state.soccer.goal_line[0][0][0], state.soccer.goal_line[0][0][1], state.soccer.goal_line[0][0][2]
-                            ))
+                        # with open(os.path.join(save, 'player%02d_%05d' % (i, t)) + '.csv', 'w') as f:
+                        #     f.write('%0.3f,%0.3f,%0.3f,%0.3f,%0.3f,%0.3f' % (
+                        #         state.soccer.ball.location[0],state.soccer.ball.location[1], state.soccer.ball.location[2],
+                        #         state.soccer.goal_line[0][0][0], state.soccer.goal_line[0][0][1], state.soccer.goal_line[0][0][2]
+                        #     ))
                         '''
                         '''
                         f.write('%0.3f %0.3f %0.3f %0.3f %0.3f %0.3f' %tuple(state.soccer.ball.location), tuple(state.soccer.goal_line[0][0])))
