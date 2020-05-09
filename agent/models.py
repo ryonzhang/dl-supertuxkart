@@ -51,7 +51,7 @@ class Detector(torch.nn.Module):
         def forward(self, x):
             return F.relu(self.c1(x))
 
-    def __init__(self, layers=[16, 24, 32], n_class=3, kernel_size=3, use_skip=True):
+    def __init__(self, layers=[16, 24, 32], n_class=1, kernel_size=3, use_skip=True):
         """
            Your code here.
            Setup your detection network
@@ -106,7 +106,7 @@ class Detector(torch.nn.Module):
            Hint: Use extract_peak here
         """
         cls = self.forward(image[None])
-        return [(c, *d) for c in range(cls.size(1)) for d in extract_peak(cls[0, c], max_det=30, **kwargs)]
+        return [(c, *d) for c in range(cls.size(1)) for d in extract_peak(cls[0, c],  **kwargs)]
 
     def detect_with_size(self, image, **kwargs):
         """

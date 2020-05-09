@@ -39,6 +39,7 @@ class Tournament:
         self.race_config.players.pop()
         
         self.active_players = []
+        print('ryon:')
         for p in players:
             if p is not None:
                 self.race_config.players.append(p.config)
@@ -62,11 +63,8 @@ class Tournament:
 
     def play(self, save=None, max_frames=50):
         state = pystk.WorldState()
-        if save is not None:
-            import PIL.Image
-            import os
-            if not os.path.exists(save):
-                os.makedirs(save)
+        import PIL.Image
+        import os
         prev_score = [0,0]
         for t in range(max_frames):
             #print('\rframe %d' % t, end='\r')
@@ -105,10 +103,10 @@ class Tournament:
                 #print("Soccer location to car: ", aim_point_car )
     
 
-
             list_actions = []
             for i, p in enumerate(self.active_players):
                 player = state.players[i]
+
                 image = np.array(self.k.render_data[i].image)
                 
                 action = pystk.Action()
@@ -120,29 +118,59 @@ class Tournament:
                 
                 list_actions.append(action)
 
-                proj = np.array(state.players[0].camera.projection).T
-                view = np.array(state.players[0].camera.view).T
+                proj = np.array(player.camera.projection).T
+                view = np.array(player.camera.view).T
+                # print(state.players)
 
-                if save is not None:
 
                     #Generate labels for training sets
-                    aim_point_world_soccer = state.soccer.ball.location
-                    aps = self._to_image(aim_point_world_soccer, proj, view)
-                    aps_one = self._to_image([aim_point_world_soccer[0]-state.soccer.ball.size/2,aim_point_world_soccer[1]-0.18,aim_point_world_soccer[2]-state.soccer.ball.size/2], proj, view)
-                    aps_two = self._to_image(
-                        [aim_point_world_soccer[0] + state.soccer.ball.size / 2, aim_point_world_soccer[1] + 0.18,
-                         aim_point_world_soccer[2] + state.soccer.ball.size / 2], proj, view)
+                aim_point_world_soccer = state.soccer.ball.location
+                aps = self._to_image(aim_point_world_soccer, proj, view)
+                #print(state.soccer.goal_line )
 
-                    if 0 <= aps[0] < self.graphics_config.screen_width and 0 <= aps[1] < self.graphics_config.screen_height:
-                        print('one:'+str(aps_one))
-                        print('two:'+str(aps_two))
-                        width1= aps_one[0] if aps_one[0] < aps_two[0] else aps_two[0]
-                        width2 = aps_one[0] if aps_one[0] > aps_two[0] else aps_two[0]
-                        height1 = aps_one[1] if aps_one[1] < aps_two[1] else aps_two[1]
-                        height2 = aps_one[1] if aps_one[1] > aps_two[1] else aps_two[1]
-                        print([[width1,height1,width2,height2]])
-                        PIL.Image.fromarray(image).save(os.path.join(save, 'player%02d_%05d.png' % (i, t)))
-                        np.savez(os.path.join(save, 'player%02d_%05d' % (i, t)) + '.npz', puck=[[width1,height1,width2,height2]])
+                list = [[state.soccer.ball.size / 2, 0.18, state.soccer.ball.size / 2],
+                        [state.soccer.ball.size / 2, 0.18, -state.soccer.ball.size / 2],
+                        [state.soccer.ball.size / 2, -0.18, state.soccer.ball.size / 2],
+                        [state.soccer.ball.size / 2, -0.18, -state.soccer.ball.size / 2],
+                        [-state.soccer.ball.size / 2, 0.18, state.soccer.ball.size / 2],
+                        [-state.soccer.ball.size / 2, 0.18, -state.soccer.ball.size / 2],
+                        [-state.soccer.ball.size / 2, -0.18, state.soccer.ball.size / 2],
+                        [-state.soccer.ball.size / 2, -0.18, -state.soccer.ball.size / 2]]
+
+                width1 = 400
+                width2 = 0
+                height1 = 300
+                height2 = 0
+                for item in list:
+                    aps_flex = self._to_image(
+                        [aim_point_world_soccer[0] + item[0], aim_point_world_soccer[1] + item[1],
+                         aim_point_world_soccer[2] + item[2]], proj, view)
+                    if width1 >aps_flex[0]:
+                        width1 = aps_flex[0]
+                    if width2 < aps_flex[0]:
+                        width2 = aps_flex[0]
+                    if height1 > aps_flex[1]:
+                        height1=aps_flex[1]
+                    if height2 <aps_flex[1]:
+                        height2 = aps_flex[1]
+
+                player_x=player.kart.location[0]
+                player_y=player.kart.location[2]
+                front_x = player.kart.front[0]
+                front_y = player.kart.front[2]
+                ball_x = aim_point_world_soccer[0]
+                ball_y = aim_point_world_soccer[2]
+
+                vector_self = [front_x-player_x,front_y-player_y]
+                vector_ball = [ball_x - player_x, ball_y - player_y]
+
+                dot_prod = vector_self[0]*vector_ball[0]+vector_self[1]*vector_ball[1]
+
+                if dot_prod >0 and 0 <= aps[0] < self.graphics_config.screen_width and 0 <= aps[1] < self.graphics_config.screen_height and -30<player.kart.location[0]<30 and -55<player.kart.location[2]<55:
+                    if (width2-width1)*(height2-height1)>40:
+                        # print([[width1, height1, width2, height2]])
+                        PIL.Image.fromarray(image).save(os.path.join('dense_data/train/', 'player%02d_%05d.png' % (i, t)))
+                        np.savez(os.path.join('dense_data/train/', 'player%02d_%05d' % (i, t)) + '.npz', puck=[[width1,height1,width2,height2]])
 
 
                         '''

@@ -548,16 +548,17 @@ class HockeyPlayer:
         proj = np.array(player_info.camera.projection).T
         view = np.array(player_info.camera.view).T
 
-        det = model.detect(img_tensor, min_score=-2)
+        det = model.detect(img_tensor, min_score=-0.5,max_det=1)
         ball_info = self.previous_location
         for tup in det:
-            if tup[0] == 0 and tup[1] > -1.2:
-                ball_info = self._to_world([tup[2], tup[3]], proj, view, 0.3695)
-                break
+            ball_info = self._to_world([tup[2], tup[3]], proj, view, 0.3695)
+            self.previous_location = ball_info
+            break
 
 
         # # Getting the puck_location, team mate karts, opponent karts and items on the field
-        self.previous_location = ball_info
+
+        print('info calculated:' + str(det))
         print('model calculated:'+str(ball_info))
         print('real:'+str(ball))
 

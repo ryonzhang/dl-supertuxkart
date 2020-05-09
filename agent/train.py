@@ -30,8 +30,7 @@ def train(args):
     transform = eval(args.transform, {k: v for k, v in inspect.getmembers(dense_transforms) if inspect.isclass(v)})
     valid_transform = eval(args.valid_transform,
                            {k: v for k, v in inspect.getmembers(dense_transforms) if inspect.isclass(v)})
-    train_data = load_detection_data('dense_data/train', num_workers=64, transform=transform)
-    valid_data = load_detection_data('dense_data/valid', num_workers=64, transform=valid_transform)
+
 
     det_loss = torch.nn.BCEWithLogitsLoss(reduction='none')
     # size_loss = torch.nn.MSELoss(reduction='none')
@@ -39,6 +38,8 @@ def train(args):
     global_step = 0
     global_step_val = 0
     for epoch in range(args.num_epoch):
+        train_data = load_detection_data('dense_data/train', num_workers=64, transform=transform)
+        valid_data = load_detection_data('dense_data/valid', num_workers=64, transform=valid_transform)
         model.train()
 
         avg_train_loss = []
